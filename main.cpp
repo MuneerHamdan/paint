@@ -3,32 +3,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "paint.h"
-int main(){
+#include "win.h"
+int main()
+{
   Display *display = XOpenDisplay(NULL);
-  if(!display){
+  if(!display)
+  {
     fprintf(stderr, "nodisplay\n");
     return 1;
   }
   int screen = DefaultScreen(display);
-  Window window = XCreateSimpleWindow(
-      display,
-      RootWindow(display, screen),
-      100, 100,
-      500, 300,
-      1,
-      BlackPixel(display, screen),
-      WhitePixel(display, screen)
-      );
-  GC gc = XCreateGC(display, window, 0, NULL);
-  XStoreName(display, window, "c window");
-  XSelectInput(display, window, ExposureMask | KeyPressMask);
+  Win win(display, screen);
 
-  XMapWindow(display, window);
   XEvent event;
-  bool run = True;
-  while(run){
+  bool running = True;
+  while(running)
+  {
     XGrabPointer(display,
-        window,
+        *win.getwin(),
         True,
         PointerMotionMask | ButtonPressMask | ButtonReleaseMask,
         GrabModeAsync,
@@ -38,35 +30,46 @@ int main(){
         CurrentTime);
     XAllowEvents(display,AsyncPointer, CurrentTime);
     XNextEvent(display, &event);
-    if(event.type == KeyPress){
-      printf("key press %d\n", event.xkey.keycode);
-      switch(event.xkey.keycode){
-        case(24):
-          printf("q");
-          run = False;
-          break;
-      }
+
+    switch(event.type)
+    {
+      case(ButtonPress):
+        printf("mouse press: %d\n", event.xbutton.button);
+        XSetForeground(display, *win.getgc(), 0xFF00FF);
+        XFillRectangle(display, *win.getwin(), *win.getgc(), event.xbutton.x, event.xbutton.y, 100, 100);
+        XFlush(display);
+        break;
+      case(Expose):
+        XSetForeground(display, *win.getgc(), 0xFF0000);
+        XDrawPoint(display, *win.getwin(), *win.getgc(), 50, 50);
+        XFillRectangle(display, *win.getwin(), *win.getgc(), 0, 0, 100, 100);
+        XSetForeground(display, *win.getgc(), 0x00FF00);
+        XFillRectangle(display, *win.getwin(), *win.getgc(), 50, 0, 100, 100);
+        XFlush(display);
+        break;
+      case(KeyPress):
+        printf("key press %d\n", event.xkey.keycode);
+        switch(event.xkey.keycode)
+        {
+          case(24):
+            printf("q");
+            running = False;
+            break;
+          case(57):
+//            mkwindow();
+            break;
+        }
+        break;
     }
-//    if(event.type == MotionNotify){
-//      printf("hello2");
-//      break;
-//    }
-    if(event.type == ButtonPress){
-      printf("mouse press\n");
-      XSetForeground(display, gc, 0x0000FF);
-      XFillRectangle(display, window, gc, event.xbutton.x, event.xbutton.y, 100, 100);
-      XFlush(display);
-    }
-    if(event.type == Expose){
-      XSetForeground(display, gc, 0xFF0000);
-      XDrawPoint(display, window, gc, 50, 50);
-      XFillRectangle(display, window, gc, 0, 0, 100, 100);
-      XSetForeground(display, gc, 0x00FF00);
-      XFillRectangle(display, window, gc, 50, 0, 100, 100);
-      XFlush(display);
-    }
+    //    if(event.type == MotionNotify)
+    //    {
+    //      printf("hello2");
+    //      break;
+    //    }
   }
-  XDestroyWindow(display, window);
+//  XFreeGC(display, cgc);
+  XFreeGC(display, *win.getgc());
+  XDestroyWindow(display, *win.getwin());
   XCloseDisplay(display);
 
 
