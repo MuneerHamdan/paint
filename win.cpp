@@ -14,7 +14,7 @@ Win::Win(Display* display, int screen){
   m_gc = XCreateGC(display, m_win, 0, NULL);
   XStoreName(display, m_win, "window");
 //  XSelectInput(display, m_win, ExposureMask | KeyPressMask);
-  XSelectInput(display, m_win, ExposureMask | KeyPressMask | ButtonPressMask | ButtonReleaseMask);
+  XSelectInput(display, m_win, ExposureMask | KeyPressMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask);
   XMapWindow(display, m_win);
 }
 Window* Win::getwin(){

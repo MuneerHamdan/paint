@@ -1,9 +1,31 @@
 #include <unistd.h>
+#include <X11/keysym.h>
 #include <X11/Xlib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "paint.h"
 #include "win.h"
+
+void changecolor(Display* display, Win* win, int x){
+  if (x < 100)
+    XSetForeground(display, *win->getgc(), 0xFF0000);
+  else if (x < 200)
+    XSetForeground(display, *win->getgc(), 0xFF9900);
+  else if (x < 300)
+    XSetForeground(display, *win->getgc(), 0xFFFF00);
+  else if (x < 400)
+    XSetForeground(display, *win->getgc(), 0x00FF00);
+  else if (x < 500)
+    XSetForeground(display, *win->getgc(), 0x0099FF);
+  else if (x < 600)
+    XSetForeground(display, *win->getgc(), 0x0000FF);
+  else if (x < 700)
+    XSetForeground(display, *win->getgc(), 0x9900FF);
+  else if (x < 800)
+    XSetForeground(display, *win->getgc(), 0xFFFFFF);
+  else if (x < 900)
+    XSetForeground(display, *win->getgc(), 0x000000);
+}
 
 int main()
 {
@@ -21,84 +43,71 @@ int main()
 
   bool holding = 0;
 
-  while(running)
+  while (running)
   {
-    while(XPending(display))
-    {
-      XNextEvent(display, &event);
-      if(event.type == ButtonPress && event.xbutton.button == Button1)
-      {
-        holding = 1;
-      }
-      if (event.type == ButtonRelease && event.xbutton.button == Button1)
-      {
-        holding = 0;
-      }
-    }
-    if(holding)
-    {
-      printf("holding\n");
-      if(event.xbutton.x > 0 && event.xbutton.x < 100 && event.xbutton.x > 0 && event.xbutton.y < 50)
-      {
-        XSetForeground(display, *win.getgc(), 0xFF0000);
-      }
-      else if(event.xbutton.x > 100 && event.xbutton.x < 200 && event.xbutton.x > 0 && event.xbutton.y < 50)
-      {
-        XSetForeground(display, *win.getgc(), 0xFF9900);
-      }
-      else if(event.xbutton.x > 200 && event.xbutton.x < 300 && event.xbutton.x > 0 && event.xbutton.y < 50)
-      {
-        XSetForeground(display, *win.getgc(), 0xFFFF00);
-      }
-      else if(event.xbutton.x > 300 && event.xbutton.x < 400 && event.xbutton.x > 0 && event.xbutton.y < 50)
-      {
-        XSetForeground(display, *win.getgc(), 0x00FF00);
-      }
-      else if(event.xbutton.x > 400 && event.xbutton.x < 500 && event.xbutton.x > 0 && event.xbutton.y < 50)
-      {
-        XSetForeground(display, *win.getgc(), 0x0099FF);
-      }
-      else if(event.xbutton.x > 500 && event.xbutton.x < 600 && event.xbutton.x > 0 && event.xbutton.y < 50)
-      {
-        XSetForeground(display, *win.getgc(), 0x0000FF);
-      }
-      else if(event.xbutton.x > 600 && event.xbutton.x < 700 && event.xbutton.x > 0 && event.xbutton.y < 50)
-      {
-        XSetForeground(display, *win.getgc(), 0x9900FF);
-      }
-      else if(event.xbutton.x > 700 && event.xbutton.x < 800 && event.xbutton.x > 0 && event.xbutton.y < 50)
-      {
-        XSetForeground(display, *win.getgc(), 0xFFFFFF);
-      }
-      else if(event.xbutton.x > 800 && event.xbutton.x < 900 && event.xbutton.x > 0 && event.xbutton.y < 50)
-      {
-        XSetForeground(display, *win.getgc(), 0x000000);
-      }
-      else
-      {
-        XFillRectangle(display, *win.getwin(), *win.getgc(), event.xbutton.x-5, event.xbutton.y-5, 10, 10);
-        XFlush(display);
-      }
-    }
-//    usleep(100);
+    XNextEvent(display, &event);
 
-    XGrabPointer(display,
-        *win.getwin(),
-        True,
-        PointerMotionMask | ButtonPressMask | ButtonReleaseMask,
-        GrabModeAsync,
-        GrabModeAsync,
-        None,
-        None,
-        CurrentTime);
-    XAllowEvents(display,AsyncPointer, CurrentTime);
-
-    switch(event.type)
+    switch (event.type)
     {
-      case(ButtonPress):
-        printf("mouse press: %d\n", event.xbutton.button);
+      case ButtonPress:
+        if (event.xbutton.button == Button1){
+          holding = true;
+          int x = event.xbutton.x;
+          int y = event.xbutton.y;
+          if(y < 50)
+          {
+            changecolor(display, &win, x);
+          }
+          else{
+            XFillRectangle
+              (
+               display,
+               *win.getwin(),
+               *win.getgc(),
+               event.xbutton.x,
+               event.xbutton.y,
+               10,
+               10
+              );
+          }
+          XFlush(display);
+        }
         break;
-      case(Expose):
+
+      case ButtonRelease:
+        if (event.xbutton.button == Button1)
+          holding = false;
+        break;
+
+      case MotionNotify:
+        if (holding)
+        {
+          int x = event.xmotion.x;
+          int y = event.xmotion.y;
+
+          if (y < 50)
+          {
+            changecolor(display, &win, x);
+          }
+          XFillRectangle(
+              display,
+              *win.getwin(),
+              *win.getgc(),
+              x - 5,
+              y - 5,
+              10,
+              10
+              );
+        }
+
+        XFlush(display);
+        break;
+      case KeyPress:
+        if (XLookupKeysym(&event.xkey, 0) == XK_q)
+          running = false;
+        break;
+
+      case Expose:
         //        XSetForeground(display, *win.getgc(), 0xFF0000);
         //        XDrawPoint(display, *win.getwin(), *win.getgc(), 20, 20);
 
@@ -135,26 +144,16 @@ int main()
         XSetForeground(display, *win.getgc(), 0xFFFFFF);
         XFlush(display);
         break;
-      case(KeyPress):
-        printf("key press %d\n", event.xkey.keycode);
-        switch(event.xkey.keycode)
-        {
-          case(24):
-            printf("q");
-            running = False;
-            break;
-          case(57):
-            //            mkwindow();
-            break;
-        }
-        break;
     }
-    //    if(event.type == MotionNotify)
-    //    {
-    //      printf("hello2");
-    //      break;
-    //    }
   }
+  //    usleep(100);
+
+
+  //    if(event.type == MotionNotify)
+  //    {
+  //      printf("hello2");
+  //      break;
+  //    }
   XFreeGC(display, *win.getgc());
   XDestroyWindow(display, *win.getwin());
   XCloseDisplay(display);
